@@ -3,7 +3,8 @@
   const q = document.getElementById("q");
   const clearBtn = document.getElementById("clearBtn");
   const pickBtn = document.getElementById("pickBtn");
-  const langBtn = document.getElementById("langBtn");
+  const btnEn = document.getElementById("btnEn");
+  const btnZh = document.getElementById("btnZh");
   const suggestEl = document.getElementById("suggest");
 
   const statusEl = document.getElementById("status");
@@ -23,16 +24,16 @@
 
   let svgEl = null;
 
-  // regionKey -> { paths: [..], labelGroup: <g>, en: "Stomach", zh: "胃" }
+  // regionKey -> { paths: [], labelGroup: <g>, en: "", zh: "" }
   const regions = new Map();
   let selectedKey = null;
 
-  // 当前语言：'zh' 或 'en'
-  let lang = "zh";
+  // ✅ 默认英文
+  let lang = "en";
 
-  // ✅ 中英切换用的字典：key = SVG 的 class/id（例如 stomach, duodenum）
-  // 你要更多就继续往里加
+  // ✅ key（SVG class/id）=> zh/en
   const I18N = {
+    "heart": { zh: "心", en: "Heart" },
     "head-brain": { zh: "头/脑", en: "Head/Brain" },
     "teeth-sinuses": { zh: "牙/鼻窦", en: "Teeth/Sinuses" },
     "eye": { zh: "眼", en: "Eye" },
@@ -54,7 +55,6 @@
     "small-intestine": { zh: "小肠", en: "Small Intestine" },
     "sciatic-nerve": { zh: "坐骨神经", en: "Sciatic Nerve" },
     "lower-back": { zh: "下背", en: "Lower Back" },
-    "cervical-spine": { zh: "脊柱/骶骨/腰椎（见标签）", en: "Spine (see labels)" }, // 你这张图里它被复用多次
     "rectum": { zh: "直肠", en: "Rectum" },
     "bladder": { zh: "膀胱", en: "Bladder" },
     "ureter": { zh: "输尿管", en: "Ureter" },
@@ -70,12 +70,22 @@
     "nose": { zh: "鼻", en: "Nose" },
     "throat": { zh: "咽喉", en: "Throat" },
     "pituitary": { zh: "垂体", en: "Pituitary" },
-    "heart": { zh: "心", en: "Heart" }
+
+    // 这张 SVG 里 cervical-spine 被复用多次（Cervical/Lumbar/Sacrum）
+    // 我们用“按原英文文本映射”来解决（见 TEXT_MAP）
+  };
+
+  // ✅ 用原始英文 textContent 做映射（解决“同一个key重复/被复用”）
+  // 你截图里出现：Lower Back / Sacrum / Lumbar Spine / Cervical Spine
+  const TEXT_MAP = {
+    "Sacrum": { zh: "骶骨", en: "Sacrum" },
+    "Lumbar Spine": { zh: "腰椎", en: "Lumbar Spine" },
+    "Cervical Spine": { zh: "颈椎", en: "Cervical Spine" },
+    "Lower Back": { zh: "下背", en: "Lower Back" }
   };
 
   const UI = {
     zh: {
-      langBtn: "中文",
       title: "足底反射区",
       placeholder: "搜索：胃 / stomach / pancreas…",
       pick: "选择",
@@ -92,10 +102,11 @@
       sideLeft: "左",
       sideRight: "右",
       sideBoth: "左右",
-      sideNA: "—"
+      sideNA: "—",
+      loading: "正在加载图…",
+      source: "Source: naturallivingideas.com"
     },
     en: {
-      langBtn: "English",
       title: "Foot Reflexology",
       placeholder: "Search: stomach / pancreas / duodenum…",
       pick: "Pick",
@@ -104,7 +115,7 @@
       statusSelected: (name) => `Selected: ${name}`,
       panelSel: "Selection",
       panelList: "Matches",
-      hint: "Type a few letters/characters for suggestions. Or click a region / list item.",
+      hint: "Type for suggestions. Or click a region / list item.",
       kName: "Name: ",
       kSide: "Side: ",
       none: "(none)",
@@ -112,20 +123,15 @@
       sideLeft: "Left",
       sideRight: "Right",
       sideBoth: "Both",
-      sideNA: "—"
+      sideNA: "—",
+      loading: "Loading…",
+      source: "Source: naturallivingideas.com"
     }
   };
 
   function t() { return UI[lang]; }
-
-  function norm(s) {
-    return (s || "").toString().trim().toLowerCase();
-  }
-
-  function isGarbageClass(c) {
-    return c === "text-group" || /^cls-\d+$/i.test(c) || c === "red";
-  }
-
+  function norm(s) { return (s || "").toString().trim().toLowerCase(); }
+  function isGarbageClass(c) { return c === "text-group" || /^cls-\d+$/i.test(c) || c === "red"; }
   function pickRegionKeyFromPath(p) {
     const cls = Array.from(p.classList).find(c => !isGarbageClass(c));
     return cls || null;
@@ -134,16 +140,19 @@
   function getLabelGroupForKey(key) {
     const byId = svgEl.querySelector(`g#${CSS.escape(key)}`);
     if (byId && byId.tagName.toLowerCase() === "g") return byId;
-
     const byClass = svgEl.querySelector(`g.text-group.${CSS.escape(key)}`);
     return byClass || null;
   }
 
   function getEnglishFromSVGLabel(labelGroup, fallbackKey) {
-    if (!labelGroup) return fallbackKey;
-    const tx = labelGroup.querySelector("text");
+    const tx = labelGroup?.querySelector?.("text");
     const s = tx?.textContent?.trim();
     return s || fallbackKey;
+  }
+
+  function titleCaseFromKey(key) {
+    return key.replace(/_/g, "-").split("-").filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   }
 
   function getDisplayName(key, rec) {
@@ -184,7 +193,6 @@
 
   function setSelected(key) {
     selectedKey = key;
-
     clearAllHighlights();
 
     if (!key || !regions.has(key)) {
@@ -196,7 +204,6 @@
     }
 
     const rec = regions.get(key);
-
     rec.paths.forEach(p => p.classList.add("selected"));
     if (rec.labelGroup) rec.labelGroup.classList.add("label-selected");
 
@@ -214,26 +221,26 @@
     const qn = norm(query);
     if (!qn) return [];
 
-    // “开头匹配”：优先 displayName 开头，其次 key 开头，再其次包含
     const scored = [];
-
     for (const [key, rec] of regions.entries()) {
       const dn = norm(getDisplayName(key, rec));
       const en = norm(rec.en);
       const zh = norm(rec.zh);
+      const kk = norm(key);
 
       let score = 999;
-
       if (dn.startsWith(qn)) score = 0;
       else if (en.startsWith(qn) || zh.startsWith(qn)) score = 1;
-      else if (norm(key).startsWith(qn)) score = 2;
-      else if (dn.includes(qn) || en.includes(qn) || zh.includes(qn) || norm(key).includes(qn)) score = 3;
+      else if (kk.startsWith(qn)) score = 2;
+      else if (dn.includes(qn) || en.includes(qn) || zh.includes(qn) || kk.includes(qn)) score = 3;
       else continue;
 
       scored.push({ key, rec, score });
     }
 
-    scored.sort((a, b) => a.score - b.score || getDisplayName(a.key, a.rec).localeCompare(getDisplayName(b.key, b.rec)));
+    scored.sort((a, b) =>
+      a.score - b.score || getDisplayName(a.key, a.rec).localeCompare(getDisplayName(b.key, b.rec))
+    );
     return scored.slice(0, limit);
   }
 
@@ -244,15 +251,11 @@
 
   function showSuggest(items) {
     suggestEl.innerHTML = "";
-    if (!items.length) {
-      hideSuggest();
-      return;
-    }
+    if (!items.length) return hideSuggest();
 
     for (const { key, rec } of items) {
       const row = document.createElement("div");
       row.className = "suggestItem";
-      row.dataset.key = key;
 
       const a = document.createElement("div");
       a.className = "a";
@@ -260,17 +263,16 @@
 
       const b = document.createElement("div");
       b.className = "b";
-      // 另一语言做辅助显示（可读，不丑）
-      const other = lang === "zh"
-        ? (I18N[key]?.en || rec.en || "")
-        : (I18N[key]?.zh || rec.zh || "");
-      b.textContent = other ? other : key;
+      // 另一语言提示
+      const other = (lang === "zh")
+        ? (I18N[key]?.en || rec.en || key)
+        : (I18N[key]?.zh || rec.zh || key);
+      b.textContent = other;
 
       row.appendChild(a);
       row.appendChild(b);
 
       row.addEventListener("mousedown", (e) => {
-        // mousedown 防止 input blur 先触发导致列表消失点不到
         e.preventDefault();
         setSelected(key);
         q.value = getDisplayName(key, rec);
@@ -284,8 +286,7 @@
   }
 
   function renderList() {
-    const query = q.value || "";
-    const items = getMatchesPrefix(query, 200); // 列表给多点，用户滚动也行
+    const items = getMatchesPrefix(q.value, 200);
     listEl.innerHTML = "";
 
     if (!items.length) {
@@ -299,7 +300,6 @@
     for (const { key, rec } of items) {
       const div = document.createElement("div");
       div.className = "item" + (key === selectedKey ? " active" : "");
-      div.dataset.key = key;
 
       const left = document.createElement("div");
       left.className = "name";
@@ -322,22 +322,63 @@
     }
   }
 
+  // ✅ 核心：切换语言时，把 SVG 里所有 text 也替换
+  function applyLangToSVGTexts() {
+    if (!svgEl) return;
+
+    // 1) 先处理 text-group（按 key 映射）
+    const groups = Array.from(svgEl.querySelectorAll("g.text-group"));
+    for (const g of groups) {
+      // 找到这个组对应的 key：优先 id，其次 class
+      let key = g.getAttribute("id") || "";
+      if (!key) {
+        const cls = Array.from(g.classList).find(c => c !== "text-group");
+        key = cls || "";
+      }
+      if (!key) continue;
+
+      const tx = g.querySelector("text");
+      if (!tx) continue;
+
+      // 保存原始英文（只保存一次）
+      if (!tx.dataset.en) tx.dataset.en = tx.textContent.trim();
+
+      const en0 = tx.dataset.en;
+      // 2) 优先用 TEXT_MAP 解决 Sacrum/Lumbar/Cervical 这种“复用 key”的文本
+      const mapByText = TEXT_MAP[en0];
+      if (mapByText) {
+        tx.textContent = (lang === "zh") ? mapByText.zh : mapByText.en;
+        continue;
+      }
+
+      // 3) 普通情况按 key 映射
+      const dict = I18N[key];
+      if (!dict) {
+        // 没字典就回到英文原文
+        tx.textContent = (lang === "zh") ? (tx.textContent) : en0;
+      } else {
+        tx.textContent = (lang === "zh") ? dict.zh : (dict.en || en0);
+      }
+    }
+  }
+
   function applyLangToUI() {
-    // 顶部
+    // 顶部和右侧 UI
     titleText.textContent = t().title;
+    document.title = t().title;
     q.placeholder = t().placeholder;
     pickBtn.textContent = t().pick;
     clearBtn.textContent = t().clear;
-    langBtn.textContent = t().langBtn;
+    loadingText.textContent = t().loading;
+    sourceText.textContent = t().source;
 
-    // 右侧
     panelSelTitle.textContent = t().panelSel;
     panelListTitle.textContent = t().panelList;
     hintText.textContent = t().hint;
     kName.textContent = t().kName;
     kSide.textContent = t().kSide;
 
-    // 状态 / 选中
+    // 状态/选择面板
     if (!selectedKey) {
       statusEl.textContent = t().statusNone;
       selNameEl.textContent = t().none;
@@ -350,12 +391,12 @@
       selSideEl.textContent = rec ? computeSide(rec.paths) : t().sideNA;
     }
 
-    // 列表重绘（显示语言要变）
+    // 列表 + 建议
     renderList();
+    showSuggest(getMatchesPrefix(q.value, 8));
 
-    // 建议列表也刷新
-    const sug = getMatchesPrefix(q.value, 8);
-    showSuggest(sug);
+    // ✅ SVG labels 也切
+    applyLangToSVGTexts();
   }
 
   function wireSVG() {
@@ -380,32 +421,20 @@
       });
     }
 
-    // 绑定标签组 + EN/ZH 名字
+    // label group + EN/ZH
     for (const [key, rec] of regions.entries()) {
       const lg = getLabelGroupForKey(key);
       rec.labelGroup = lg;
-
-      // EN：从 SVG 标签里取（如果有）
       rec.en = getEnglishFromSVGLabel(lg, titleCaseFromKey(key));
-
-      // ZH：从字典取
       rec.zh = I18N[key]?.zh || "";
     }
 
-    // 点 SVG 空白取消选中
+    // 点空白取消
     svgEl.addEventListener("click", () => setSelected(null));
 
+    // 默认英文 UI + SVG label
     applyLangToUI();
     setSelected(null);
-  }
-
-  function titleCaseFromKey(key) {
-    return key
-      .replace(/_/g, "-")
-      .split("-")
-      .filter(Boolean)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
   }
 
   async function loadSVG() {
@@ -413,38 +442,26 @@
       const res = await fetch("/foot-reflex-app/foot-reflex.svg", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const text = await res.text();
-      host.innerHTML = text;
-
+      host.innerHTML = await res.text();
       svgEl = host.querySelector("svg");
       if (!svgEl) throw new Error("SVG not found");
-
       svgEl.classList.add("feet");
 
       wireSVG();
     } catch (err) {
-      host.innerHTML = `<div class="loading">加载 SVG 失败：${String(err)}</div>`;
+      host.innerHTML = `<div class="loading">Load failed: ${String(err)}</div>`;
     }
   }
 
   // ---------- 输入联想 ----------
   q.addEventListener("input", () => {
-    const items = getMatchesPrefix(q.value, 8);
-    showSuggest(items);
+    showSuggest(getMatchesPrefix(q.value, 8));
     renderList();
   });
 
-  q.addEventListener("focus", () => {
-    const items = getMatchesPrefix(q.value, 8);
-    showSuggest(items);
-  });
+  q.addEventListener("focus", () => showSuggest(getMatchesPrefix(q.value, 8)));
+  q.addEventListener("blur", () => setTimeout(hideSuggest, 120));
 
-  q.addEventListener("blur", () => {
-    // 延迟隐藏，给 mousedown 点击候选留时间
-    setTimeout(hideSuggest, 120);
-  });
-
-  // Enter：直接选择第一个候选
   q.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -459,7 +476,6 @@
     if (e.key === "Escape") hideSuggest();
   });
 
-  // “选择”按钮：选第一个候选
   pickBtn.addEventListener("click", () => {
     const items = getMatchesPrefix(q.value, 1);
     if (items.length) {
@@ -477,13 +493,16 @@
     renderList();
   });
 
-  // 语言切换
-  langBtn.addEventListener("click", () => {
-    lang = (lang === "zh") ? "en" : "zh";
+  // ✅ 两个按钮直接设语言
+  btnEn.addEventListener("click", () => {
+    lang = "en";
+    applyLangToUI();
+  });
+  btnZh.addEventListener("click", () => {
+    lang = "zh";
     applyLangToUI();
   });
 
   loadSVG();
 })();
-
 
