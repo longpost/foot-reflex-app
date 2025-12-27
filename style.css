@@ -1,16 +1,33 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; color:#111; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+    "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  color:#111;
+}
 .page { max-width: 1200px; margin: 0 auto; padding: 14px; }
 
-.topbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding: 10px 12px; border:1px solid #e5e5e5; border-radius: 12px; }
+.topbar {
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  padding: 10px 12px; border:1px solid #e5e5e5; border-radius: 12px;
+}
 .title { font-size: 18px; font-weight: 700; }
 .search { display:flex; gap:8px; align-items:center; }
-.search input { width: 320px; max-width: 70vw; padding: 8px 10px; border:1px solid #ddd; border-radius:10px; outline:none; }
-.search button { padding: 8px 10px; border:1px solid #ddd; border-radius:10px; background:#fff; cursor:pointer; }
+.search input {
+  width: 320px; max-width: 70vw;
+  padding: 8px 10px; border:1px solid #ddd; border-radius:10px; outline:none;
+}
+.search button {
+  padding: 8px 10px; border:1px solid #ddd; border-radius:10px;
+  background:#fff; cursor:pointer;
+}
 .search button:hover { background:#f6f6f6; }
 .status { margin-left:auto; font-size: 13px; color:#555; }
 
-.main { display:grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-top: 12px; }
+.main {
+  display:grid; grid-template-columns: 1.6fr 1fr;
+  gap: 14px; margin-top: 12px;
+}
 @media (max-width: 980px) {
   .main { grid-template-columns: 1fr; }
   .status { margin-left: 0; }
@@ -29,7 +46,11 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .hint { font-size: 12px; color:#666; margin-bottom: 8px; }
 
 .list { display:flex; flex-direction:column; gap:6px; }
-.item { display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid #eee; border-radius: 10px; padding: 8px 10px; cursor:pointer; }
+.item {
+  display:flex; justify-content:space-between; gap:10px; align-items:center;
+  border:1px solid #eee; border-radius: 10px; padding: 8px 10px;
+  cursor:pointer;
+}
 .item:hover { background:#fafafa; }
 .item .name { font-weight: 600; }
 .item .meta { font-size: 12px; color:#666; white-space:nowrap; }
@@ -38,11 +59,9 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 /* =======================
    SVG：关键样式（去黑块）
    ======================= */
-
-/* SVG 自适应 */
 svg.feet, svg { width: 100%; height: auto; display:block; }
 
-/* ✅ 一刀切：默认不填充（就不会整块黑） */
+/* ✅ 默认不填充（黑块就没了） */
 svg path, svg polygon, svg polyline, svg line {
   fill: transparent;
   fill-opacity: 0;
@@ -51,16 +70,18 @@ svg path, svg polygon, svg polyline, svg line {
   vector-effect: non-scaling-stroke;
 }
 
-/* 背景/脚轮廓那条大路径别抢戏（你这张图里是 cls-40） */
+/* 脚大外轮廓（你这张图里常见是 cls-40） */
 svg .cls-40 {
   stroke: #111;
   stroke-width: 1.2;
+  fill: transparent;
+  fill-opacity: 0;
 }
 
-/* 可点击区域：cursor */
+/* 可点击区域手型：排除外轮廓 */
 svg #Feet path:not(.cls-40) { cursor: pointer; }
 
-/* hover / selected：高亮 */
+/* hover / selected 高亮 */
 svg #Feet path.hovered {
   fill: #ffcc66;
   fill-opacity: 0.18;
@@ -74,8 +95,9 @@ svg #Feet path.selected {
 /* 标签文字默认 */
 svg text { fill: #222; }
 
-/* 被选中的标签：加粗 + 变色 */
+/* 被选中的标签：加粗 + 变色 + 引导线变色加粗 */
 svg g.label-selected text { font-weight: 800; fill: #b30000; }
 svg g.label-selected polyline,
 svg g.label-selected line { stroke: #b30000; stroke-width: 2.2; }
+
 
