@@ -12,22 +12,49 @@ body {
   padding: 10px 12px; border:1px solid #e5e5e5; border-radius: 12px;
 }
 .title { font-size: 18px; font-weight: 700; }
+
+.controls { display:flex; gap:8px; align-items:center; }
+.btn {
+  padding: 8px 10px; border:1px solid #ddd; border-radius:10px;
+  background:#fff; cursor:pointer; user-select:none;
+}
+.btn:hover { background:#f6f6f6; }
+
+.searchWrap { position: relative; }
 .search { display:flex; gap:8px; align-items:center; }
 .search input {
   width: 320px; max-width: 70vw;
   padding: 8px 10px; border:1px solid #ddd; border-radius:10px; outline:none;
 }
-.search button {
-  padding: 8px 10px; border:1px solid #ddd; border-radius:10px;
-  background:#fff; cursor:pointer;
+
+.suggest{
+  position:absolute;
+  top: 44px;
+  left: 0;
+  width: min(520px, 92vw);
+  border:1px solid #e5e5e5;
+  border-radius: 12px;
+  background:#fff;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+  padding: 6px;
+  z-index: 50;
 }
-.search button:hover { background:#f6f6f6; }
+.suggestItem{
+  display:flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items:center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor:pointer;
+}
+.suggestItem:hover{ background:#f6f6f6; }
+.suggestItem .a{ font-weight: 700; }
+.suggestItem .b{ font-size: 12px; color:#666; white-space:nowrap; }
+
 .status { margin-left:auto; font-size: 13px; color:#555; }
 
-.main {
-  display:grid; grid-template-columns: 1.6fr 1fr;
-  gap: 14px; margin-top: 12px;
-}
+.main { display:grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-top: 12px; }
 @media (max-width: 980px) {
   .main { grid-template-columns: 1fr; }
   .status { margin-left: 0; }
@@ -52,16 +79,15 @@ body {
   cursor:pointer;
 }
 .item:hover { background:#fafafa; }
-.item .name { font-weight: 600; }
+.item .name { font-weight: 700; }
 .item .meta { font-size: 12px; color:#666; white-space:nowrap; }
 .item.active { border-color:#cfcfcf; background:#f6f6f6; }
 
 /* =======================
-   SVG：关键样式（去黑块）
+   SVG：去黑块 + 高亮
    ======================= */
 svg.feet, svg { width: 100%; height: auto; display:block; }
 
-/* ✅ 默认不填充（黑块就没了） */
 svg path, svg polygon, svg polyline, svg line {
   fill: transparent;
   fill-opacity: 0;
@@ -69,35 +95,19 @@ svg path, svg polygon, svg polyline, svg line {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
-
-/* 脚大外轮廓（你这张图里常见是 cls-40） */
 svg .cls-40 {
   stroke: #111;
   stroke-width: 1.2;
   fill: transparent;
   fill-opacity: 0;
 }
-
-/* 可点击区域手型：排除外轮廓 */
 svg #Feet path:not(.cls-40) { cursor: pointer; }
 
-/* hover / selected 高亮 */
-svg #Feet path.hovered {
-  fill: #ffcc66;
-  fill-opacity: 0.18;
-}
-svg #Feet path.selected {
-  fill: #ffcc66;
-  fill-opacity: 0.38;
-  stroke-width: 2;
-}
+svg #Feet path.hovered { fill: #ffcc66; fill-opacity: 0.18; }
+svg #Feet path.selected { fill: #ffcc66; fill-opacity: 0.38; stroke-width: 2; }
 
-/* 标签文字默认 */
 svg text { fill: #222; }
-
-/* 被选中的标签：加粗 + 变色 + 引导线变色加粗 */
 svg g.label-selected text { font-weight: 800; fill: #b30000; }
 svg g.label-selected polyline,
 svg g.label-selected line { stroke: #b30000; stroke-width: 2.2; }
-
 
