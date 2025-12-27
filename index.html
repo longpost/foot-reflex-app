@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>足底反射区</title>
-  <link rel="stylesheet" href="./style.css" />
+
+  <!-- ✅ 用绝对路径，避免 GitHub Pages 子目录相对路径坑 -->
+  <link rel="stylesheet" href="/foot-reflex-app/style.css" />
 </head>
 <body>
   <div class="page">
@@ -47,6 +49,8 @@
     </main>
   </div>
 
-  <script src="./main.js"></script>
+  <!-- ✅ defer 确保 DOM 先准备好；绝对路径避免 404 -->
+  <script defer src="/foot-reflex-app/main.js"></script>
 </body>
 </html>
+
