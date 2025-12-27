@@ -4,18 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>足底反射区</title>
-
-  <!-- ✅ 用绝对路径，避免 GitHub Pages 子目录相对路径坑 -->
   <link rel="stylesheet" href="/foot-reflex-app/style.css" />
 </head>
 <body>
   <div class="page">
     <header class="topbar">
-      <div class="title">足底反射区</div>
+      <div class="title" id="titleText">足底反射区</div>
 
-      <div class="search">
-        <input id="q" type="text" placeholder="搜索：胃 / stomach / pancreas…" autocomplete="off" />
-        <button id="clearBtn" type="button">清空</button>
+      <div class="controls">
+        <button id="langBtn" type="button" class="btn">中文</button>
+      </div>
+
+      <div class="searchWrap">
+        <div class="search">
+          <input id="q" type="text" placeholder="搜索：胃 / stomach / pancreas…" autocomplete="off" />
+          <button id="pickBtn" type="button" class="btn">选择</button>
+          <button id="clearBtn" type="button" class="btn">清空</button>
+        </div>
+        <div id="suggest" class="suggest" hidden></div>
       </div>
 
       <div class="status" id="status">还没选区域</div>
@@ -24,24 +30,24 @@
     <main class="main">
       <section class="left">
         <div id="svgHost" class="svgHost">
-          <div class="loading">正在加载图…</div>
+          <div class="loading" id="loadingText">正在加载图…</div>
         </div>
-        <div class="source">Source: naturallivingideas.com（你给的 SVG 来源）</div>
+        <div class="source" id="sourceText">Source: naturallivingideas.com（你给的 SVG 来源）</div>
       </section>
 
       <aside class="right">
         <div class="panel">
-          <div class="panel-title">当前选择</div>
+          <div class="panel-title" id="panelSelTitle">当前选择</div>
           <div class="panel-body">
-            <div><span class="k">名称：</span><span id="selName">（无）</span></div>
-            <div><span class="k">区域：</span><span id="selSide">—</span></div>
+            <div><span class="k" id="kName">名称：</span><span id="selName">（无）</span></div>
+            <div><span class="k" id="kSide">区域：</span><span id="selSide">—</span></div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-title">匹配结果</div>
+          <div class="panel-title" id="panelListTitle">匹配结果</div>
           <div class="panel-body">
-            <div class="hint">点下面列表，或直接点脚上区域。</div>
+            <div class="hint" id="hintText">输入几个字/字母会出现候选；也可以点下面列表或直接点脚上区域。</div>
             <div id="list" class="list"></div>
           </div>
         </div>
@@ -49,7 +55,6 @@
     </main>
   </div>
 
-  <!-- ✅ defer 确保 DOM 先准备好；绝对路径避免 404 -->
   <script defer src="/foot-reflex-app/main.js"></script>
 </body>
 </html>
