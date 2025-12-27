@@ -1,53 +1,81 @@
-/* 容器 */
-.content-container {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 16px;
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; color:#111; }
+.page { max-width: 1200px; margin: 0 auto; padding: 14px; }
+
+.topbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding: 10px 12px; border:1px solid #e5e5e5; border-radius: 12px; }
+.title { font-size: 18px; font-weight: 700; }
+.search { display:flex; gap:8px; align-items:center; }
+.search input { width: 320px; max-width: 70vw; padding: 8px 10px; border:1px solid #ddd; border-radius:10px; outline:none; }
+.search button { padding: 8px 10px; border:1px solid #ddd; border-radius:10px; background:#fff; cursor:pointer; }
+.search button:hover { background:#f6f6f6; }
+.status { margin-left:auto; font-size: 13px; color:#555; }
+
+.main { display:grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 980px) {
+  .main { grid-template-columns: 1fr; }
+  .status { margin-left: 0; }
 }
+
+.left { border:1px solid #e5e5e5; border-radius: 12px; padding: 12px; }
+.svgHost { width:100%; overflow:auto; }
+.loading { padding: 18px; color:#666; }
+.source { margin-top: 10px; font-size: 12px; color:#777; }
+
+.right { display:flex; flex-direction:column; gap: 12px; }
+.panel { border:1px solid #e5e5e5; border-radius: 12px; padding: 12px; }
+.panel-title { font-weight: 700; margin-bottom: 8px; }
+.panel-body { font-size: 14px; color:#222; }
+.k { color:#666; display:inline-block; width: 52px; }
+.hint { font-size: 12px; color:#666; margin-bottom: 8px; }
+
+.list { display:flex; flex-direction:column; gap:6px; }
+.item { display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid #eee; border-radius: 10px; padding: 8px 10px; cursor:pointer; }
+.item:hover { background:#fafafa; }
+.item .name { font-weight: 600; }
+.item .meta { font-size: 12px; color:#666; white-space:nowrap; }
+.item.active { border-color:#cfcfcf; background:#f6f6f6; }
+
+/* =======================
+   SVG：关键样式（去黑块）
+   ======================= */
 
 /* SVG 自适应 */
-svg.feet {
-  width: 100%;
-  height: auto;
-  display: block;
-}
+svg.feet, svg { width: 100%; height: auto; display:block; }
 
-/* ✅ 关键：干掉默认黑色填充 */
-svg.feet path,
-svg.feet polygon,
-svg.feet polyline,
-svg.feet line {
-  fill: transparent;            /* 不填充色（等于“没黑块”） */
-  fill-opacity: 0;              /* 保证透明 */
-  stroke: #222;                 /* 轮廓线（你要更淡就改成 #555） */
+/* ✅ 一刀切：默认不填充（就不会整块黑） */
+svg path, svg polygon, svg polyline, svg line {
+  fill: transparent;
+  fill-opacity: 0;
+  stroke: #222;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
-/* 让可点击区域手型 */
-svg.feet path {
-  cursor: pointer;
-  pointer-events: all;
+/* 背景/脚轮廓那条大路径别抢戏（你这张图里是 cls-40） */
+svg .cls-40 {
+  stroke: #111;
+  stroke-width: 1.2;
 }
 
-/* hover 提示 */
-svg.feet path.hovered {
-  fill-opacity: 0.12;
-}
+/* 可点击区域：cursor */
+svg #Feet path:not(.cls-40) { cursor: pointer; }
 
-/* 选中高亮 */
-svg.feet path.selected {
-  fill-opacity: 0.28;
+/* hover / selected：高亮 */
+svg #Feet path.hovered {
+  fill: #ffcc66;
+  fill-opacity: 0.18;
+}
+svg #Feet path.selected {
+  fill: #ffcc66;
+  fill-opacity: 0.38;
   stroke-width: 2;
 }
 
-/* 右侧信息栏（可选，但强烈建议有） */
-.panel {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-.panel b { font-size: 15px; }
+/* 标签文字默认 */
+svg text { fill: #222; }
+
+/* 被选中的标签：加粗 + 变色 */
+svg g.label-selected text { font-weight: 800; fill: #b30000; }
+svg g.label-selected polyline,
+svg g.label-selected line { stroke: #b30000; stroke-width: 2.2; }
+
