@@ -1,53 +1,54 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>足底反射区</title>
+  <title>Foot Reflexology</title>
   <link rel="stylesheet" href="/foot-reflex-app/style.css" />
 </head>
 <body>
   <div class="page">
     <header class="topbar">
-      <div class="title" id="titleText">足底反射区</div>
+      <div class="title" id="titleText">Foot Reflexology</div>
 
       <div class="controls">
-        <button id="langBtn" type="button" class="btn">中文</button>
+        <button id="btnEn" type="button" class="btn">English</button>
+        <button id="btnZh" type="button" class="btn">中文</button>
       </div>
 
       <div class="searchWrap">
         <div class="search">
-          <input id="q" type="text" placeholder="搜索：胃 / stomach / pancreas…" autocomplete="off" />
-          <button id="pickBtn" type="button" class="btn">选择</button>
-          <button id="clearBtn" type="button" class="btn">清空</button>
+          <input id="q" type="text" placeholder="Search: stomach / pancreas / duodenum…" autocomplete="off" />
+          <button id="pickBtn" type="button" class="btn">Pick</button>
+          <button id="clearBtn" type="button" class="btn">Clear</button>
         </div>
         <div id="suggest" class="suggest" hidden></div>
       </div>
 
-      <div class="status" id="status">还没选区域</div>
+      <div class="status" id="status">No selection</div>
     </header>
 
     <main class="main">
       <section class="left">
         <div id="svgHost" class="svgHost">
-          <div class="loading" id="loadingText">正在加载图…</div>
+          <div class="loading" id="loadingText">Loading…</div>
         </div>
-        <div class="source" id="sourceText">Source: naturallivingideas.com（你给的 SVG 来源）</div>
+        <div class="source" id="sourceText">Source: naturallivingideas.com</div>
       </section>
 
       <aside class="right">
         <div class="panel">
-          <div class="panel-title" id="panelSelTitle">当前选择</div>
+          <div class="panel-title" id="panelSelTitle">Selection</div>
           <div class="panel-body">
-            <div><span class="k" id="kName">名称：</span><span id="selName">（无）</span></div>
-            <div><span class="k" id="kSide">区域：</span><span id="selSide">—</span></div>
+            <div><span class="k" id="kName">Name: </span><span id="selName">(none)</span></div>
+            <div><span class="k" id="kSide">Side: </span><span id="selSide">—</span></div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="panel-title" id="panelListTitle">匹配结果</div>
+          <div class="panel-title" id="panelListTitle">Matches</div>
           <div class="panel-body">
-            <div class="hint" id="hintText">输入几个字/字母会出现候选；也可以点下面列表或直接点脚上区域。</div>
+            <div class="hint" id="hintText">Type for suggestions. Or click a region / list item.</div>
             <div id="list" class="list"></div>
           </div>
         </div>
