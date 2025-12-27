@@ -1,0 +1,53 @@
+/* 容器 */
+.content-container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* SVG 自适应 */
+svg.feet {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ✅ 关键：干掉默认黑色填充 */
+svg.feet path,
+svg.feet polygon,
+svg.feet polyline,
+svg.feet line {
+  fill: transparent;            /* 不填充色（等于“没黑块”） */
+  fill-opacity: 0;              /* 保证透明 */
+  stroke: #222;                 /* 轮廓线（你要更淡就改成 #555） */
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 让可点击区域手型 */
+svg.feet path {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+/* hover 提示 */
+svg.feet path.hovered {
+  fill-opacity: 0.12;
+}
+
+/* 选中高亮 */
+svg.feet path.selected {
+  fill-opacity: 0.28;
+  stroke-width: 2;
+}
+
+/* 右侧信息栏（可选，但强烈建议有） */
+.panel {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.panel b { font-size: 15px; }
