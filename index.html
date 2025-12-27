@@ -1,76 +1,52 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>足底反射区 · 交互图</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>足底反射区</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">🦶</div>
-      <div>
-        <div class="title">足底反射区 · Web App</div>
-        <div class="subtitle">点击区域查看说明（示意/教学用；如要商用请确认授权）</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <div class="seg" role="tablist" aria-label="foot filter">
-        <button class="seg-btn active" data-filter="all" aria-selected="true">全部</button>
-        <button class="seg-btn" data-filter="L" aria-selected="false">左脚</button>
-        <button class="seg-btn" data-filter="R" aria-selected="false">右脚</button>
-      </div>
+  <div class="page">
+    <header class="topbar">
+      <div class="title">足底反射区</div>
 
       <div class="search">
-        <input id="searchInput" type="search" placeholder="搜索：胃 / 肾 / 脊柱 / 头…" />
-        <button id="clearBtn" title="清空">×</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="layout">
-    <section class="canvas">
-      <div class="hint">
-        <span class="dot"></span>
-        悬停看名称，点击选中；按住 <kbd>Shift</kbd> 可多选。
+        <input id="q" type="text" placeholder="搜索：胃 / stomach / pancreas…" autocomplete="off" />
+        <button id="clearBtn" type="button">清空</button>
       </div>
 
-      <div class="svg-wrap" id="svgWrap">
-        <div class="loading" id="loading">正在加载 SVG…</div>
-      </div>
+      <div class="status" id="status">还没选区域</div>
+    </header>
 
-      <div class="legend">
-        <div class="legend-item"><span class="swatch swatch-sel"></span> 选中</div>
-        <div class="legend-item"><span class="swatch swatch-hit"></span> 命中（搜索/过滤）</div>
-        <div class="legend-item"><span class="swatch swatch-dim"></span> 未命中（灰掉）</div>
-      </div>
-    </section>
-
-    <aside class="panel">
-      <div class="panel-head">
-        <div class="panel-title">区域信息</div>
-        <div class="panel-actions">
-          <button id="resetSelBtn" class="btn">清空选择</button>
+    <main class="main">
+      <section class="left">
+        <div id="svgHost" class="svgHost">
+          <div class="loading">正在加载图…</div>
         </div>
-      </div>
+        <div class="source">Source: naturallivingideas.com（你给的 SVG 来源）</div>
+      </section>
 
-      <div id="detail" class="detail empty">
-        <div class="empty-title">还没选区域</div>
-        <div class="empty-text">点任意反射区，这里会显示名称与说明。</div>
-      </div>
+      <aside class="right">
+        <div class="panel">
+          <div class="panel-title">当前选择</div>
+          <div class="panel-body">
+            <div><span class="k">名称：</span><span id="selName">（无）</span></div>
+            <div><span class="k">区域：</span><span id="selSide">—</span></div>
+          </div>
+        </div>
 
-      <div class="list-head">
-        <div class="panel-title">命中列表</div>
-        <div class="count"><span id="matchCount">0</span> 项</div>
-      </div>
-      <div id="list" class="list"></div>
-    </aside>
-  </main>
+        <div class="panel">
+          <div class="panel-title">匹配结果</div>
+          <div class="panel-body">
+            <div class="hint">点下面列表，或直接点脚上区域。</div>
+            <div id="list" class="list"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
 
-  <div id="tooltip" class="tooltip" hidden></div>
-
-  <script src="./app.js"></script>
+  <script src="./main.js"></script>
 </body>
 </html>
