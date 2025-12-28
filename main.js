@@ -164,28 +164,31 @@
   }
 
   function computeSide(paths) {
-    if (!svgEl || !paths?.length) return t().sideNA;
-  
-    // 用屏幕坐标判断左右，避免 getBBox 在部分环境不稳定
-    const svgRect = svgEl.getBoundingClientRect();
-    const mid = svgRect.left + svgRect.width / 2;
-  
-    let left = 0, right = 0;
-  
-    for (const p of paths) {
-      try {
-        const r = p.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        if (cx < mid) left++;
-        else right++;
-      } catch {}
-    }
-  
-    if (left && right) return t().sideBoth;
-    if (left) return t().sideLeft;
-    if (right) return t().sideRight;
-    return t().sideNA;
+  if (!svgEl || !paths?.length) return t().sideNA;
+
+  const vb = svgEl.viewBox?.baseVal;
+  if (!vb) return t().sideBoth;
+  const mid = vb.x + vb.width / 2;
+
+  let left = 0, right = 0;
+
+  for (const p of paths) {
+    const d = p.getAttribute("d") || "";
+    // 取第一个 M 的 x 坐标（足够稳定，用于左右判断）
+    const m = d.match(/[Mm]\s*([-\d.]+)/);
+    if (!m) continue;
+    const x = parseFloat(m[1]);
+    if (!Number.isFinite(x)) continue;
+
+    if (x < mid) left++;
+    else right++;
   }
+
+  if (left && right) return t().sideBoth;
+  if (left) return t().sideLeft;
+  if (right) return t().sideRight;
+  return t().sideNA;
+}
 
 
   function clearAllHighlights() {
