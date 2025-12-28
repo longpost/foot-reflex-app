@@ -10,26 +10,29 @@
   const suggestEl = $("suggest");
 
   const statusEl = $("status");
-  const listEl = $("list");
+  const matchListEl = $("matchList");
+  const allListEl = $("allList");
+
   const selNameEl = $("selName");
   const selSideEl = $("selSide");
 
   const titleText = $("titleText");
   const loadingText = $("loadingText");
   const sourceText = $("sourceText");
+
   const panelSelTitle = $("panelSelTitle");
-  const panelListTitle = $("panelListTitle");
+  const panelMatchTitle = $("panelMatchTitle");
+  const panelAllTitle = $("panelAllTitle");
   const hintText = $("hintText");
+  const allHintText = $("allHintText");
   const kName = $("kName");
   const kSide = $("kSide");
 
-  // 防止“某个元素没更新导致脚本直接崩”
   function must(el, name) {
     if (!el) throw new Error(`Missing element #${name} (index.html not updated?)`);
     return el;
   }
 
-  // 必要元素检查（缺了就直接把错误显示在页面上）
   try {
     must(host, "svgHost");
     must(q, "q");
@@ -39,7 +42,8 @@
     must(btnZh, "btnZh");
     must(suggestEl, "suggest");
     must(statusEl, "status");
-    must(listEl, "list");
+    must(matchListEl, "matchList");
+    must(allListEl, "allList");
     must(selNameEl, "selName");
     must(selSideEl, "selSide");
   } catch (e) {
@@ -48,7 +52,7 @@
   }
 
   let svgEl = null;
-  const regions = new Map();
+  const regions = new Map(); // key -> { paths:[], labelGroup, en, zh }
   let selectedKey = null;
   let lang = "en";
 
@@ -108,8 +112,10 @@
       statusNone: "还没选区域",
       statusSelected: (name) => `已选择：${name}`,
       panelSel: "当前选择",
-      panelList: "匹配结果",
-      hint: "输入几个字/字母会出现候选；也可以点下面列表或直接点脚上区域。",
+      panelMatch: "匹配结果",
+      panelAll: "全部器官",
+      hint: "输入几个字/字母会出现候选；也可以点匹配列表或直接点脚上区域。",
+      allHint: "直接点列表项高亮。",
       kName: "名称：",
       kSide: "区域：",
       none: "（无）",
@@ -129,8 +135,10 @@
       statusNone: "No selection",
       statusSelected: (name) => `Selected: ${name}`,
       panelSel: "Selection",
-      panelList: "Matches",
-      hint: "Type for suggestions. Or click a region / list item.",
+      panelMatch: "Matches",
+      panelAll: "All Regions",
+      hint: "Type for suggestions. Or click match list / foot region.",
+      allHint: "Click any item to highlight.",
       kName: "Name: ",
       kSide: "Side: ",
       none: "(none)",
@@ -149,38 +157,6 @@
   const isGarbageClass = (c) => c === "text-group" || /^cls-\d+$/i.test(c) || c === "red";
   const pickRegionKeyFromPath = (p) => Array.from(p.classList).find(c => !isGarbageClass(c)) || null;
 
-  function applyLangToUI() {
-    titleText.textContent = t().title;
-    document.title = t().title;
-    q.placeholder = t().placeholder;
-    pickBtn.textContent = t().pick;
-    clearBtn.textContent = t().clear;
-    loadingText.textContent = t().loading;
-    sourceText.textContent = t().source;
-
-    panelSelTitle.textContent = t().panelSel;
-    panelListTitle.textContent = t().panelList;
-    hintText.textContent = t().hint;
-    kName.textContent = t().kName;
-    kSide.textContent = t().kSide;
-
-    if (!selectedKey) {
-      statusEl.textContent = t().statusNone;
-      selNameEl.textContent = t().none;
-      selSideEl.textContent = t().sideNA;
-    } else {
-      const rec = regions.get(selectedKey);
-      const name = rec ? getDisplayName(selectedKey, rec) : t().none;
-      statusEl.textContent = t().statusSelected(name);
-      selNameEl.textContent = name;
-      selSideEl.textContent = rec ? computeSide(rec.paths) : t().sideNA;
-    }
-
-    applyLangToSVGTexts();
-    renderList();
-    showSuggest(getMatches(q.value, 8));
-  }
-
   function getDisplayName(key, rec) {
     const dict = I18N[key];
     if (lang === "zh") return dict?.zh || rec.zh || dict?.en || rec.en || key;
@@ -194,7 +170,6 @@
 
     const mid = vb.x + vb.width / 2;
     let left = 0, right = 0;
-
     for (const p of paths) {
       try {
         const b = p.getBBox();
@@ -203,7 +178,6 @@
         else if (cx > mid) right++;
       } catch {}
     }
-
     if (left && right) return t().sideBoth;
     if (left) return t().sideLeft;
     if (right) return t().sideRight;
@@ -225,7 +199,8 @@
       statusEl.textContent = t().statusNone;
       selNameEl.textContent = t().none;
       selSideEl.textContent = t().sideNA;
-      renderList();
+      renderMatchList();
+      renderAllList();
       return;
     }
 
@@ -237,10 +212,12 @@
     statusEl.textContent = t().statusSelected(name);
     selNameEl.textContent = name;
     selSideEl.textContent = computeSide(rec.paths);
-    renderList();
+
+    renderMatchList();
+    renderAllList();
   }
 
-  function getMatches(query, limit = 8) {
+  function getMatches(query, limit = 200) {
     const qn = norm(query);
     if (!qn) return [];
     const out = [];
@@ -301,34 +278,51 @@
     suggestEl.hidden = false;
   }
 
-  function renderList() {
+  function renderMatchList() {
     const items = getMatches(q.value, 200);
-    listEl.innerHTML = "";
+    matchListEl.innerHTML = "";
+
     if (!items.length) {
       const div = document.createElement("div");
       div.className = "hint";
       div.textContent = t().noMatch;
-      listEl.appendChild(div);
+      matchListEl.appendChild(div);
       return;
     }
 
     for (const { key, rec } of items) {
-      const div = document.createElement("div");
-      div.className = "item" + (key === selectedKey ? " active" : "");
-
-      const left = document.createElement("div");
-      left.className = "name";
-      left.textContent = getDisplayName(key, rec);
-
-      const right = document.createElement("div");
-      right.className = "meta";
-      right.textContent = computeSide(rec.paths);
-
-      div.appendChild(left);
-      div.appendChild(right);
-      div.addEventListener("click", () => setSelected(key));
-      listEl.appendChild(div);
+      matchListEl.appendChild(makeRow(key, rec));
     }
+  }
+
+  function renderAllList() {
+    const arr = Array.from(regions.entries())
+      .map(([key, rec]) => ({ key, rec }))
+      .sort((a, b) => getDisplayName(a.key, a.rec).localeCompare(getDisplayName(b.key, b.rec)));
+
+    allListEl.innerHTML = "";
+    for (const { key, rec } of arr) {
+      allListEl.appendChild(makeRow(key, rec));
+    }
+  }
+
+  function makeRow(key, rec) {
+    const div = document.createElement("div");
+    div.className = "item" + (key === selectedKey ? " active" : "");
+
+    const left = document.createElement("div");
+    left.className = "name";
+    left.textContent = getDisplayName(key, rec);
+
+    const right = document.createElement("div");
+    right.className = "meta";
+    right.textContent = computeSide(rec.paths);
+
+    div.appendChild(left);
+    div.appendChild(right);
+
+    div.addEventListener("click", () => setSelected(key));
+    return div;
   }
 
   function applyLangToSVGTexts() {
@@ -354,11 +348,50 @@
 
       const dict = I18N[key];
       if (!dict) {
-        tx.textContent = (lang === "zh") ? en0 : en0;
+        tx.textContent = en0;
       } else {
         tx.textContent = (lang === "zh") ? dict.zh : (dict.en || en0);
       }
     }
+  }
+
+  function applyLangToUI() {
+    titleText.textContent = t().title;
+    document.title = t().title;
+    q.placeholder = t().placeholder;
+    pickBtn.textContent = t().pick;
+    clearBtn.textContent = t().clear;
+    loadingText.textContent = t().loading;
+    sourceText.textContent = t().source;
+
+    panelSelTitle.textContent = t().panelSel;
+    panelMatchTitle.textContent = t().panelMatch;
+    panelAllTitle.textContent = t().panelAll;
+    hintText.textContent = t().hint;
+    allHintText.textContent = t().allHint;
+    kName.textContent = t().kName;
+    kSide.textContent = t().kSide;
+
+    applyLangToSVGTexts();
+
+    // 列表重新渲染（显示语言要变）
+    renderMatchList();
+    renderAllList();
+
+    // 选中栏刷新
+    if (!selectedKey) {
+      statusEl.textContent = t().statusNone;
+      selNameEl.textContent = t().none;
+      selSideEl.textContent = t().sideNA;
+    } else {
+      const rec = regions.get(selectedKey);
+      const name = rec ? getDisplayName(selectedKey, rec) : t().none;
+      statusEl.textContent = t().statusSelected(name);
+      selNameEl.textContent = name;
+      selSideEl.textContent = rec ? computeSide(rec.paths) : t().sideNA;
+    }
+
+    showSuggest(getMatches(q.value, 8));
   }
 
   function getLabelGroupForKey(key) {
@@ -402,18 +435,18 @@
 
     applyLangToUI();
     setSelected(null);
+
+    // 初始右下全部列表就有
+    renderAllList();
   }
 
   async function loadSVG() {
     try {
-      // ✅ 用相对路径，最稳（同目录）
       const res = await fetch("./foot-reflex.svg", { cache: "no-store" });
       if (!res.ok) throw new Error(`SVG fetch failed: HTTP ${res.status}`);
-
       host.innerHTML = await res.text();
       svgEl = host.querySelector("svg");
-      if (!svgEl) throw new Error("SVG element not found inside foot-reflex.svg");
-
+      if (!svgEl) throw new Error("SVG element not found");
       wireSVG();
     } catch (err) {
       host.innerHTML = `<div class="loading">Load failed: ${String(err.message || err)}</div>`;
@@ -421,7 +454,10 @@
   }
 
   // events
-  q.addEventListener("input", () => { showSuggest(getMatches(q.value, 8)); renderList(); });
+  q.addEventListener("input", () => {
+    showSuggest(getMatches(q.value, 8));
+    renderMatchList();
+  });
   q.addEventListener("focus", () => showSuggest(getMatches(q.value, 8)));
   q.addEventListener("blur", () => setTimeout(hideSuggest, 120));
   q.addEventListener("keydown", (e) => {
@@ -452,7 +488,7 @@
     q.value = "";
     setSelected(null);
     hideSuggest();
-    renderList();
+    renderMatchList();
   });
 
   btnEn.addEventListener("click", () => { lang = "en"; applyLangToUI(); });
