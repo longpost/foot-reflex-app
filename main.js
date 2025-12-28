@@ -165,24 +165,28 @@
 
   function computeSide(paths) {
     if (!svgEl || !paths?.length) return t().sideNA;
-    const vb = svgEl.viewBox?.baseVal;
-    if (!vb) return t().sideBoth;
-
-    const mid = vb.x + vb.width / 2;
+  
+    // 用屏幕坐标判断左右，避免 getBBox 在部分环境不稳定
+    const svgRect = svgEl.getBoundingClientRect();
+    const mid = svgRect.left + svgRect.width / 2;
+  
     let left = 0, right = 0;
+  
     for (const p of paths) {
       try {
-        const b = p.getBBox();
-        const cx = b.x + b.width / 2;
+        const r = p.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
         if (cx < mid) left++;
-        else if (cx > mid) right++;
+        else right++;
       } catch {}
     }
+  
     if (left && right) return t().sideBoth;
     if (left) return t().sideLeft;
     if (right) return t().sideRight;
     return t().sideNA;
   }
+
 
   function clearAllHighlights() {
     if (!svgEl) return;
