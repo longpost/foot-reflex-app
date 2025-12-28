@@ -6,7 +6,6 @@ body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial
 .topbar { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
 .row1 { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .title { font-size: 20px; font-weight: 700; }
-
 .controls { display: flex; gap: 8px; }
 
 .row2 { margin-top: 10px; position: relative; }
@@ -35,11 +34,10 @@ body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial
 .list { display: flex; flex-direction: column; gap: 8px; }
 .item { border: 1px solid #ddd; border-radius: 8px; padding: 10px; cursor: pointer; display:flex; justify-content:space-between; gap:12px; }
 .item:hover { border-color: #999; }
-.item.active { border-color: #333; }
+.item.active { border-color: #2f7d57; }
 .name { font-weight: 600; }
 .meta { color: #666; font-size: 13px; white-space: nowrap; }
 
-/* ✅ 建议下拉 */
 .suggest {
   position: absolute;
   left: 0; right: 0;
@@ -54,8 +52,9 @@ body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial
 .suggestItem:hover { background: #f5f5f5; }
 .suggestItem .b { color:#666; font-size: 13px; }
 
-/* ✅ SVG：默认不填充（彻底去黑色） */
 svg.feet { width: 100%; height: auto; display: block; }
+
+/* ✅ 默认不填充，避免黑块 */
 #Feet path {
   fill: none !important;
   stroke: #555;
@@ -63,13 +62,20 @@ svg.feet { width: 100%; height: auto; display: block; }
   cursor: pointer;
 }
 
-/* hover/selected 高亮 */
+/* hover */
 #Feet path.hovered { stroke-width: 2; }
-#Feet path.selected { stroke: #000; stroke-width: 3; }
 
-/* 选中标签组 */
+/* ✅ 选中：淡绿色描边 + 淡绿色填充（只对 selected 开启 fill） */
+#Feet path.selected {
+  stroke: #2f7d57;
+  stroke-width: 3;
+  fill: rgba(144, 238, 144, 0.35) !important; /* 淡绿色 */
+}
+
+/* 选中标签粗体 */
 g.label-selected text { font-weight: 800; }
 
-/* 外轮廓(cls-40)细一点 */
+/* 外轮廓 */
 #Feet path.cls-40 { stroke: #888; stroke-width: 1; cursor: default; }
+
 
