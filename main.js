@@ -1,222 +1,204 @@
 (() => {
+  // -----------------------------
+  // Small helpers
+  // -----------------------------
   const $ = (id) => document.getElementById(id);
 
-  const host = $("svgHost");
-  const q = $("q");
-  const clearBtn = $("clearBtn");
-  const pickBtn = $("pickBtn");
-  const btnEn = $("btnEn");
-  const btnZh = $("btnZh");
-  const suggestEl = $("suggest");
+  // Try to find common elements even if ids differ a bit
+  const host =
+    $("svgHost") ||
+    $("content") ||
+    document.querySelector(".content-container") ||
+    document.body;
 
-  const statusEl = $("status");
-  const matchListEl = $("matchList");
-  const allListEl = $("allList");
+  const q = $("q") || document.querySelector('input[type="search"]');
+  const pickBtn = $("pickBtn") || document.querySelector('[data-action="pick"]');
+  const clearBtn = $("clearBtn") || document.querySelector('[data-action="clear"]');
+  const btnEn = $("btnEn") || document.querySelector('[data-lang="en"]');
+  const btnZh = $("btnZh") || document.querySelector('[data-lang="zh"]');
 
-  const selNameEl = $("selName");
-  const selSideEl = $("selSide");
+  const statusEl = $("status") || document.querySelector(".status");
+  const selNameEl = $("selName") || document.querySelector(".selName");
+  const selSideEl = $("selSide") || document.querySelector(".selSide");
 
-  const titleText = $("titleText");
-  const loadingText = $("loadingText");
-  const sourceText = $("sourceText");
+  const matchListEl = $("matchList") || $("list") || document.querySelector(".matchList");
+  const allListEl = $("allList") || document.querySelector(".allList");
 
-  const panelSelTitle = $("panelSelTitle");
-  const panelMatchTitle = $("panelMatchTitle");
-  const panelAllTitle = $("panelAllTitle");
-  const hintText = $("hintText");
-  const allHintText = $("allHintText");
-  const kName = $("kName");
-  const kSide = $("kSide");
+  const auditEl = $("audit") || document.querySelector(".audit");
 
-  function must(el, name) {
-    if (!el) throw new Error(`Missing element #${name} (index.html not updated?)`);
-    return el;
+  function die(msg) {
+    if (host) host.innerHTML = `<div style="padding:12px;font-family:system-ui;color:#b00020">JS init failed: ${msg}</div>`;
+    throw new Error(msg);
   }
 
-  try {
-    must(host, "svgHost");
-    must(q, "q");
-    must(clearBtn, "clearBtn");
-    must(pickBtn, "pickBtn");
-    must(btnEn, "btnEn");
-    must(btnZh, "btnZh");
-    must(suggestEl, "suggest");
-    must(statusEl, "status");
-    must(matchListEl, "matchList");
-    must(allListEl, "allList");
-    must(selNameEl, "selName");
-    must(selSideEl, "selSide");
-  } catch (e) {
-    if (host) host.innerHTML = `<div class="loading">JS init failed: ${String(e.message || e)}</div>`;
-    return;
-  }
+  if (!q) die("Missing search input (#q)");
+  if (!pickBtn) die("Missing Pick button (#pickBtn)");
+  if (!clearBtn) die("Missing Clear button (#clearBtn)");
+  if (!btnEn || !btnZh) die("Missing language buttons (#btnEn/#btnZh)");
+  if (!statusEl || !selNameEl || !selSideEl) die("Missing selection UI (#status/#selName/#selSide)");
+  if (!matchListEl) die("Missing match list (#matchList or #list)");
+  if (!allListEl) die("Missing all list (#allList)");
 
+  // -----------------------------
+  // i18n
+  // -----------------------------
+  let lang = "en"; // default EN as requested
   let svgEl = null;
-  const regions = new Map(); // key -> { paths:[], labelGroup, en, zh }
-  let selectedKey = null;
-  let lang = "en";
-
-  const I18N = {
-    heart: { zh: "心", en: "Heart" },
-    "head-brain": { zh: "头/脑", en: "Head/Brain" },
-    "teeth-sinuses": { zh: "牙/鼻窦", en: "Teeth/Sinuses" },
-    eye: { zh: "眼", en: "Eye" },
-    ear: { zh: "耳", en: "Ear" },
-    trapezius: { zh: "斜方肌", en: "Trapezius" },
-    armpit: { zh: "腋窝", en: "Armpit" },
-    "lung-chest": { zh: "肺/胸", en: "Lung/Chest" },
-    arm: { zh: "臂", en: "Arm" },
-    shoulder: { zh: "肩", en: "Shoulder" },
-    liver: { zh: "肝", en: "Liver" },
-    "gall-bladder": { zh: "胆", en: "Gall Bladder" },
-    spleen: { zh: "脾", en: "Spleen" },
-    kidney: { zh: "肾", en: "Kidney" },
-    elbow: { zh: "肘", en: "Elbow" },
-    leg: { zh: "腿", en: "Leg" },
-    "ascending-colon": { zh: "升结肠", en: "Ascending Colon" },
-    "descending-colon": { zh: "降结肠", en: "Descending Colon" },
-    appendix: { zh: "阑尾", en: "Appendix" },
-    "small-intestine": { zh: "小肠", en: "Small Intestine" },
-    "sciatic-nerve": { zh: "坐骨神经", en: "Sciatic Nerve" },
-    "lower-back": { zh: "下背", en: "Lower Back" },
-    rectum: { zh: "直肠", en: "Rectum" },
-    bladder: { zh: "膀胱", en: "Bladder" },
-    ureter: { zh: "输尿管", en: "Ureter" },
-    duodenum: { zh: "十二指肠", en: "Duodenum" },
-    pancreas: { zh: "胰", en: "Pancreas" },
-    adrenals: { zh: "肾上腺", en: "Adrenals" },
-    stomach: { zh: "胃", en: "Stomach" },
-    diaphragm: { zh: "横膈膜", en: "Diaphragm" },
-    "solar-plexus": { zh: "太阳神经丛", en: "Solar Plexus" },
-    esophagus: { zh: "食道", en: "Esophagus" },
-    thyroid: { zh: "甲状腺", en: "Thyroid" },
-    neck: { zh: "颈", en: "Neck" },
-    nose: { zh: "鼻", en: "Nose" },
-    throat: { zh: "咽喉", en: "Throat" },
-    pituitary: { zh: "垂体", en: "Pituitary" }
-  };
-
-  const TEXT_MAP = {
-    "Sacrum": { zh: "骶骨", en: "Sacrum" },
-    "Lumbar Spine": { zh: "腰椎", en: "Lumbar Spine" },
-    "Cervical Spine": { zh: "颈椎", en: "Cervical Spine" },
-    "Lower Back": { zh: "下背", en: "Lower Back" }
-  };
 
   const UI = {
-    zh: {
-      title: "足底反射区",
-      placeholder: "搜索：胃 / stomach / pancreas…",
-      pick: "选择",
-      clear: "清空",
-      statusNone: "还没选区域",
-      statusSelected: (name) => `已选择：${name}`,
-      panelSel: "当前选择",
-      panelMatch: "匹配结果",
-      panelAll: "全部器官",
-      hint: "输入几个字/字母会出现候选；也可以点匹配列表或直接点脚上区域。",
-      allHint: "直接点列表项高亮。",
-      kName: "名称：",
-      kSide: "区域：",
-      none: "（无）",
-      noMatch: "没有匹配项",
-      sideLeft: "左",
-      sideRight: "右",
-      sideBoth: "左右",
-      sideNA: "—",
-      loading: "正在加载图…",
-      source: "Source: naturallivingideas.com"
-    },
     en: {
-      title: "Foot Reflexology",
-      placeholder: "Search: stomach / pancreas / duodenum…",
-      pick: "Pick",
-      clear: "Clear",
+      none: "(none)",
+      sideNA: "—",
+      left: "Left",
+      right: "Right",
+      both: "Both",
       statusNone: "No selection",
       statusSelected: (name) => `Selected: ${name}`,
-      panelSel: "Selection",
-      panelMatch: "Matches",
-      panelAll: "All Regions",
-      hint: "Type for suggestions. Or click match list / foot region.",
-      allHint: "Click any item to highlight.",
-      kName: "Name: ",
-      kSide: "Side: ",
-      none: "(none)",
-      noMatch: "No matches",
-      sideLeft: "Left",
-      sideRight: "Right",
-      sideBoth: "Both",
+      noMatches: "No matches",
+      auditTitle: "SVG Audit",
+    },
+    zh: {
+      none: "（无）",
       sideNA: "—",
-      loading: "Loading…",
-      source: "Source: naturallivingideas.com"
-    }
+      left: "左",
+      right: "右",
+      both: "左右",
+      statusNone: "还没选区域",
+      statusSelected: (name) => `已选择：${name}`,
+      noMatches: "没有匹配项",
+      auditTitle: "SVG审计",
+    },
+  };
+  const t = () => UI[lang];
+
+  // Your bilingual dictionary (you can expand anytime)
+  // key = region key (derived from path class)
+  const I18N = {
+    heart: { en: "Heart", zh: "心" },
+    "head-brain": { en: "Head/Brain", zh: "头/脑" },
+    "teeth-sinuses": { en: "Teeth/Sinuses", zh: "牙/鼻窦" },
+    eye: { en: "Eye", zh: "眼" },
+    ear: { en: "Ear", zh: "耳" },
+    trapezius: { en: "Trapezius", zh: "斜方肌" },
+    armpit: { en: "Armpit", zh: "腋窝" },
+    "lung-chest": { en: "Lung/Chest", zh: "肺/胸" },
+    arm: { en: "Arm", zh: "臂" },
+    shoulder: { en: "Shoulder", zh: "肩" },
+    liver: { en: "Liver", zh: "肝" },
+    "gall-bladder": { en: "Gall Bladder", zh: "胆" },
+    spleen: { en: "Spleen", zh: "脾" },
+    kidney: { en: "Kidney", zh: "肾" },
+    elbow: { en: "Elbow", zh: "肘" },
+    leg: { en: "Leg", zh: "腿" },
+    "ascending-colon": { en: "Ascending Colon", zh: "升结肠" },
+    "descending-colon": { en: "Descending Colon", zh: "降结肠" },
+    appendix: { en: "Appendix", zh: "阑尾" },
+    "small-intestine": { en: "Small Intestine", zh: "小肠" },
+    "sciatic-nerve": { en: "Sciatic Nerve", zh: "坐骨神经" },
+    "lower-back": { en: "Lower Back", zh: "下背" },
+    rectum: { en: "Rectum", zh: "直肠" },
+    bladder: { en: "Bladder", zh: "膀胱" },
+    ureter: { en: "Ureter", zh: "输尿管" },
+    duodenum: { en: "Duodenum", zh: "十二指肠" },
+    pancreas: { en: "Pancreas", zh: "胰" },
+    adrenals: { en: "Adrenals", zh: "肾上腺" },
+    stomach: { en: "Stomach", zh: "胃" },
+    diaphragm: { en: "Diaphragm", zh: "横膈膜" },
+    "solar-plexus": { en: "Solar Plexus", zh: "太阳神经丛" },
+    esophagus: { en: "Esophagus", zh: "食道" },
+    thyroid: { en: "Thyroid", zh: "甲状腺" },
+    neck: { en: "Neck", zh: "颈" },
+    nose: { en: "Nose", zh: "鼻" },
+    throat: { en: "Throat", zh: "咽喉" },
+    pituitary: { en: "Pituitary", zh: "垂体" },
+    "cervical-spine": { en: "Cervical Spine", zh: "颈椎" },
+    // chart sometimes calls these:
+    sacrum: { en: "Sacrum", zh: "骶骨" },
+    "lumbar-spine": { en: "Lumbar Spine", zh: "腰椎" },
   };
 
-  const t = () => UI[lang];
-  const norm = (s) => (s || "").toString().trim().toLowerCase();
-  const isGarbageClass = (c) => c === "text-group" || /^cls-\d+$/i.test(c) || c === "red";
-  const pickRegionKeyFromPath = (p) => Array.from(p.classList).find(c => !isGarbageClass(c)) || null;
-
-  function getDisplayName(key, rec) {
-    const dict = I18N[key];
-    if (lang === "zh") return dict?.zh || rec.zh || dict?.en || rec.en || key;
-    return dict?.en || rec.en || dict?.zh || rec.zh || key;
+  function norm(s) {
+    return (s || "").toString().trim().toLowerCase();
   }
 
-  function computeSide(paths) {
-    if (!svgEl || !paths?.length) return t().sideNA;
-  
-    const vb = svgEl.viewBox?.baseVal;
-    if (!vb) return t().sideBoth;
-    const mid = vb.x + vb.width / 2;
-  
-    const getTranslateX = (p) => {
-      const tr = p.getAttribute("transform") || "";
-      // 支持 transform="translate(-5.55 -0.06)" 或 "translate(-5.55,-0.06)"
-      const m = tr.match(/translate\(\s*([-\d.]+)(?:[\s,]+([-\d.]+))?\s*\)/i);
-      if (!m) return 0;
-      const tx = parseFloat(m[1]);
-      return Number.isFinite(tx) ? tx : 0;
-    };
-  
-    const getStartXFromD = (p) => {
-      const d = p.getAttribute("d") || "";
-      // 抓第一个 M/m 的 x
-      const m = d.match(/[Mm]\s*([-\d.]+)/);
-      if (!m) return null;
-      const x = parseFloat(m[1]);
-      return Number.isFinite(x) ? x : null;
-    };
-  
-    let left = 0, right = 0;
-  
-    for (const p of paths) {
-      const x0 = getStartXFromD(p);
-      if (x0 == null) continue;
-      const x = x0 + getTranslateX(p);
-  
-      if (x < mid) left++;
-      else right++;
+  function displayName(key) {
+    const d = I18N[key];
+    if (!d) return key;
+    return lang === "zh" ? (d.zh || d.en || key) : (d.en || d.zh || key);
+  }
+
+  // -----------------------------
+  // SVG parsing helpers (robust)
+  // -----------------------------
+  const isGarbageClass = (c) =>
+    !c ||
+    c === "text-group" ||
+    c === "feet" ||
+    c === "red" ||
+    /^cls-\d+$/i.test(c);
+
+  // Extract region key from a path's classList:
+  // choose the first "meaningful" class that isn't cls-* / text-group etc.
+  function getRegionKeyFromPath(path) {
+    const classes = (path.getAttribute("class") || "").split(/\s+/).filter(Boolean);
+    for (const c of classes) {
+      if (!isGarbageClass(c)) return c;
     }
-  
-    if (left && right) return t().sideBoth;
-    if (left) return t().sideLeft;
-    if (right) return t().sideRight;
+    return null;
+  }
+
+  function getTranslateX(el) {
+    const tr = el.getAttribute("transform") || "";
+    const m = tr.match(/translate\(\s*([-\d.]+)(?:[\s,]+([-\d.]+))?\s*\)/i);
+    if (!m) return 0;
+    const tx = parseFloat(m[1]);
+    return Number.isFinite(tx) ? tx : 0;
+  }
+
+  // stable X: first "M x" from path d + translateX
+  function getStartXFromD(path) {
+    const d = path.getAttribute("d") || "";
+    const m = d.match(/[Mm]\s*([-\d.]+)/);
+    if (!m) return null;
+    const x = parseFloat(m[1]);
+    if (!Number.isFinite(x)) return null;
+    return x + getTranslateX(path);
+  }
+
+  function regionSide(paths) {
+    if (!svgEl || !paths?.length) return t().sideNA;
+    const vb = svgEl.viewBox?.baseVal;
+    if (!vb) return t().both;
+    const mid = vb.x + vb.width / 2;
+
+    let L = 0, R = 0;
+    for (const p of paths) {
+      const x = getStartXFromD(p);
+      if (x == null) continue;
+      if (x < mid) L++;
+      else R++;
+    }
+    if (L && R) return t().both;
+    if (L) return t().left;
+    if (R) return t().right;
     return t().sideNA;
-}
+  }
 
+  // -----------------------------
+  // App state
+  // -----------------------------
+  const regions = new Map(); // key -> { paths:[], labelGroup:null }
+  let selectedKey = null;
 
-
-  function clearAllHighlights() {
+  function clearHighlights() {
     if (!svgEl) return;
-    svgEl.querySelectorAll("#Feet path.selected").forEach(p => p.classList.remove("selected"));
-    svgEl.querySelectorAll("#Feet path.hovered").forEach(p => p.classList.remove("hovered"));
-    svgEl.querySelectorAll("g.label-selected").forEach(g => g.classList.remove("label-selected"));
+    svgEl.querySelectorAll("path.selected").forEach((p) => p.classList.remove("selected"));
+    svgEl.querySelectorAll("g.label-selected").forEach((g) => g.classList.remove("label-selected"));
   }
 
   function setSelected(key) {
     selectedKey = key;
-    clearAllHighlights();
+    clearHighlights();
 
     if (!key || !regions.has(key)) {
       statusEl.textContent = t().statusNone;
@@ -228,105 +210,16 @@
     }
 
     const rec = regions.get(key);
-    rec.paths.forEach(p => p.classList.add("selected"));
+    rec.paths.forEach((p) => p.classList.add("selected"));
     if (rec.labelGroup) rec.labelGroup.classList.add("label-selected");
 
-    const name = getDisplayName(key, rec);
+    const name = displayName(key);
     statusEl.textContent = t().statusSelected(name);
     selNameEl.textContent = name;
-    selSideEl.textContent = computeSide(rec.paths);
+    selSideEl.textContent = regionSide(rec.paths);
 
     renderMatchList();
     renderAllList();
-  }
-
-  function getMatches(query, limit = 200) {
-    const qn = norm(query);
-    if (!qn) return [];
-    const out = [];
-    for (const [key, rec] of regions.entries()) {
-      const dn = norm(getDisplayName(key, rec));
-      const en = norm(rec.en);
-      const zh = norm(rec.zh);
-      const kk = norm(key);
-
-      let score = 999;
-      if (dn.startsWith(qn)) score = 0;
-      else if (en.startsWith(qn) || zh.startsWith(qn)) score = 1;
-      else if (kk.startsWith(qn)) score = 2;
-      else if (dn.includes(qn) || en.includes(qn) || zh.includes(qn) || kk.includes(qn)) score = 3;
-      else continue;
-
-      out.push({ key, rec, score });
-    }
-    out.sort((a, b) => a.score - b.score || getDisplayName(a.key, a.rec).localeCompare(getDisplayName(b.key, b.rec)));
-    return out.slice(0, limit);
-  }
-
-  function hideSuggest() {
-    suggestEl.hidden = true;
-    suggestEl.innerHTML = "";
-  }
-
-  function showSuggest(items) {
-    suggestEl.innerHTML = "";
-    if (!items.length) return hideSuggest();
-
-    for (const { key, rec } of items) {
-      const row = document.createElement("div");
-      row.className = "suggestItem";
-
-      const a = document.createElement("div");
-      a.textContent = getDisplayName(key, rec);
-
-      const b = document.createElement("div");
-      b.className = "b";
-      const other = (lang === "zh")
-        ? (I18N[key]?.en || rec.en || key)
-        : (I18N[key]?.zh || rec.zh || key);
-      b.textContent = other;
-
-      row.appendChild(a);
-      row.appendChild(b);
-
-      row.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        setSelected(key);
-        q.value = getDisplayName(key, rec);
-        hideSuggest();
-      });
-
-      suggestEl.appendChild(row);
-    }
-    suggestEl.hidden = false;
-  }
-
-  function renderMatchList() {
-    const items = getMatches(q.value, 200);
-    matchListEl.innerHTML = "";
-
-    if (!items.length) {
-      const div = document.createElement("div");
-      div.className = "hint";
-      div.textContent = t().noMatch;
-      matchListEl.appendChild(div);
-      return;
-    }
-
-    for (const { key, rec } of items) {
-      matchListEl.appendChild(makeRow(key, rec));
-    }
-  }
-
-  function renderAllList() {
-    const arr = Array.from(regions.entries())
-      .map(([key, rec]) => ({ key, rec }))
-      .sort((a, b) => getDisplayName(a.key, a.rec).localeCompare(getDisplayName(b.key, b.rec)));
-
-    allListEl.innerHTML = "";
-    for (const { key, rec } of arr) {
-      allListEl.appendChild(makeRow(key, rec));
-    }
   }
 
   function makeRow(key, rec) {
@@ -335,11 +228,11 @@
 
     const left = document.createElement("div");
     left.className = "name";
-    left.textContent = getDisplayName(key, rec);
+    left.textContent = displayName(key);
 
     const right = document.createElement("div");
     right.className = "meta";
-    right.textContent = computeSide(rec.paths);
+    right.textContent = regionSide(rec.paths);
 
     div.appendChild(left);
     div.appendChild(right);
@@ -348,176 +241,251 @@
     return div;
   }
 
-  function applyLangToSVGTexts() {
+  function getMatches(query) {
+    const qq = norm(query);
+    if (!qq) return [];
+
+    const arr = [];
+    for (const [key, rec] of regions.entries()) {
+      const en = norm(I18N[key]?.en || key);
+      const zh = norm(I18N[key]?.zh || "");
+      const dn = norm(displayName(key));
+
+      // prefix first, then includes
+      let score = 999;
+      if (dn.startsWith(qq)) score = 0;
+      else if (en.startsWith(qq) || zh.startsWith(qq)) score = 1;
+      else if (dn.includes(qq) || en.includes(qq) || zh.includes(qq)) score = 2;
+      else continue;
+
+      arr.push({ key, rec, score });
+    }
+    arr.sort((a, b) => a.score - b.score || displayName(a.key).localeCompare(displayName(b.key)));
+    return arr;
+  }
+
+  function renderMatchList() {
+    const items = getMatches(q.value);
+    matchListEl.innerHTML = "";
+
+    if (!items.length) {
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = t().noMatches;
+      matchListEl.appendChild(hint);
+      return;
+    }
+
+    for (const it of items.slice(0, 200)) {
+      matchListEl.appendChild(makeRow(it.key, it.rec));
+    }
+  }
+
+  function renderAllList() {
+    const arr = Array.from(regions.entries())
+      .map(([key, rec]) => ({ key, rec }))
+      .sort((a, b) => displayName(a.key).localeCompare(displayName(b.key)));
+
+    allListEl.innerHTML = "";
+    for (const it of arr) allListEl.appendChild(makeRow(it.key, it.rec));
+  }
+
+  // -----------------------------
+  // SVG audit (tells you what's wrong in SVG)
+  // -----------------------------
+  function runAudit() {
     if (!svgEl) return;
-    const groups = Array.from(svgEl.querySelectorAll("g.text-group"));
-    for (const g of groups) {
-      let key = g.getAttribute("id") || "";
-      if (!key) {
-        const cls = Array.from(g.classList).find(c => c !== "text-group");
-        key = cls || "";
+
+    const vb = svgEl.viewBox?.baseVal;
+    const mid = vb ? vb.x + vb.width / 2 : null;
+
+    const report = [];
+    // For each region, list how many paths are on L/R by d+translate
+    for (const [key, rec] of regions.entries()) {
+      let L = 0, R = 0, U = 0;
+      for (const p of rec.paths) {
+        const x = getStartXFromD(p);
+        if (x == null || mid == null) {
+          U++;
+          continue;
+        }
+        if (x < mid) L++;
+        else R++;
       }
-      const tx = g.querySelector("text");
-      if (!key || !tx) continue;
-
-      if (!tx.dataset.en) tx.dataset.en = tx.textContent.trim();
-      const en0 = tx.dataset.en;
-
-      const mapByText = TEXT_MAP[en0];
-      if (mapByText) {
-        tx.textContent = (lang === "zh") ? mapByText.zh : mapByText.en;
-        continue;
-      }
-
-      const dict = I18N[key];
-      if (!dict) {
-        tx.textContent = en0;
-      } else {
-        tx.textContent = (lang === "zh") ? dict.zh : (dict.en || en0);
-      }
-    }
-  }
-
-  function applyLangToUI() {
-    titleText.textContent = t().title;
-    document.title = t().title;
-    q.placeholder = t().placeholder;
-    pickBtn.textContent = t().pick;
-    clearBtn.textContent = t().clear;
-    loadingText.textContent = t().loading;
-    sourceText.textContent = t().source;
-
-    panelSelTitle.textContent = t().panelSel;
-    panelMatchTitle.textContent = t().panelMatch;
-    panelAllTitle.textContent = t().panelAll;
-    hintText.textContent = t().hint;
-    allHintText.textContent = t().allHint;
-    kName.textContent = t().kName;
-    kSide.textContent = t().kSide;
-
-    applyLangToSVGTexts();
-
-    // 列表重新渲染（显示语言要变）
-    renderMatchList();
-    renderAllList();
-
-    // 选中栏刷新
-    if (!selectedKey) {
-      statusEl.textContent = t().statusNone;
-      selNameEl.textContent = t().none;
-      selSideEl.textContent = t().sideNA;
-    } else {
-      const rec = regions.get(selectedKey);
-      const name = rec ? getDisplayName(selectedKey, rec) : t().none;
-      statusEl.textContent = t().statusSelected(name);
-      selNameEl.textContent = name;
-      selSideEl.textContent = rec ? computeSide(rec.paths) : t().sideNA;
+      report.push({ key, L, R, U, count: rec.paths.length });
     }
 
-    showSuggest(getMatches(q.value, 8));
+    // Highlight suspicious ones:
+    // - expected to be both (many organ areas) but only on one side
+    // We don't "force both" because that would lie; we show it so you can fix SVG classes.
+    const suspicious = report
+      .filter((r) => (r.L > 0 && r.R === 0) || (r.R > 0 && r.L === 0))
+      .sort((a, b) => (b.count - a.count) || a.key.localeCompare(b.key));
+
+    // Render (optional)
+    if (auditEl) {
+      auditEl.innerHTML = "";
+      const title = document.createElement("div");
+      title.style.fontWeight = "600";
+      title.style.marginBottom = "6px";
+      title.textContent = `${t().auditTitle}: suspicious single-side regions = ${suspicious.length}`;
+      auditEl.appendChild(title);
+
+      const pre = document.createElement("pre");
+      pre.style.whiteSpace = "pre-wrap";
+      pre.style.fontSize = "12px";
+      pre.style.margin = "0";
+      pre.textContent = suspicious
+        .slice(0, 50)
+        .map((r) => `${r.key.padEnd(18)}  L=${r.L} R=${r.R}  total=${r.count}`)
+        .join("\n");
+      auditEl.appendChild(pre);
+    }
+
+    // Also dump to console so you can see it even if no audit panel exists
+    console.log("[SVG AUDIT] suspicious single-side regions:", suspicious);
   }
 
-  function getLabelGroupForKey(key) {
+  // -----------------------------
+  // Find label groups (optional)
+  // -----------------------------
+  function findLabelGroupForKey(key) {
+    // Many SVGs use g id="eye" etc
     return svgEl.querySelector(`g#${CSS.escape(key)}`) || svgEl.querySelector(`g.text-group.${CSS.escape(key)}`);
   }
 
-  function getEnglishFromSVGLabel(labelGroup, fallbackKey) {
-    const tx = labelGroup?.querySelector?.("text");
-    return tx?.textContent?.trim() || fallbackKey;
-  }
-
-  function titleCaseFromKey(key) {
-    return key.replace(/_/g, "-").split("-").filter(Boolean)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-  }
-
+  // -----------------------------
+  // Wire SVG interactions
+  // -----------------------------
   function wireSVG() {
-    const paths = Array.from(svgEl.querySelectorAll("#Feet path")).filter(p => !p.classList.contains("cls-40"));
+    if (!svgEl) return;
 
+    // Collect paths (we only want actual regions; ignore big outline cls-40)
+    const paths = Array.from(svgEl.querySelectorAll("#Feet path, path"))
+      .filter((p) => p.tagName.toLowerCase() === "path")
+      .filter((p) => !/\bcls-40\b/i.test(p.getAttribute("class") || ""));
+
+    // Build regions map
+    regions.clear();
     for (const p of paths) {
-      const key = pickRegionKeyFromPath(p);
+      const key = getRegionKeyFromPath(p);
       if (!key) continue;
 
-      if (!regions.has(key)) regions.set(key, { paths: [], labelGroup: null, en: "", zh: "" });
+      if (!regions.has(key)) regions.set(key, { paths: [], labelGroup: null });
       regions.get(key).paths.push(p);
 
-      p.addEventListener("mouseenter", () => p.classList.add("hovered"));
-      p.addEventListener("mouseleave", () => p.classList.remove("hovered"));
-      p.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); setSelected(key); });
+      // click to select
+      p.style.cursor = "pointer";
+      p.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelected(key);
+      });
     }
 
+    // attach label groups
     for (const [key, rec] of regions.entries()) {
-      const lg = getLabelGroupForKey(key);
-      rec.labelGroup = lg;
-      rec.en = getEnglishFromSVGLabel(lg, titleCaseFromKey(key));
-      rec.zh = I18N[key]?.zh || "";
+      rec.labelGroup = findLabelGroupForKey(key);
     }
 
+    // click empty space clears
     svgEl.addEventListener("click", () => setSelected(null));
-    svgEl.classList.add("feet");
 
-    applyLangToUI();
+    // initial render
+    renderAllList();
+    renderMatchList();
     setSelected(null);
 
-    // 初始右下全部列表就有
-    renderAllList();
+    // audit
+    runAudit();
   }
 
+  // -----------------------------
+  // Load SVG
+  // -----------------------------
   async function loadSVG() {
     try {
       const res = await fetch("./foot-reflex.svg", { cache: "no-store" });
       if (!res.ok) throw new Error(`SVG fetch failed: HTTP ${res.status}`);
+
       host.innerHTML = await res.text();
       svgEl = host.querySelector("svg");
-      if (!svgEl) throw new Error("SVG element not found");
+      if (!svgEl) throw new Error("SVG element not found in fetched file");
+
+      // Ensure our highlight class works even if SVG paths had fills etc.
+      // (Fill removal should be handled in CSS; we only do selection class here.)
+      svgEl.classList.add("feet");
+
       wireSVG();
     } catch (err) {
-      host.innerHTML = `<div class="loading">Load failed: ${String(err.message || err)}</div>`;
+      host.innerHTML = `<div style="padding:12px;font-family:system-ui;color:#b00020">Load failed: ${String(err.message || err)}</div>`;
     }
   }
 
-  // events
-  q.addEventListener("input", () => {
-    showSuggest(getMatches(q.value, 8));
-    renderMatchList();
-  });
-  q.addEventListener("focus", () => showSuggest(getMatches(q.value, 8)));
-  q.addEventListener("blur", () => setTimeout(hideSuggest, 120));
-  q.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const items = getMatches(q.value, 1);
-      if (items.length) {
-        const { key, rec } = items[0];
-        setSelected(key);
-        q.value = getDisplayName(key, rec);
-        hideSuggest();
-      }
-    }
-    if (e.key === "Escape") hideSuggest();
-  });
+  // -----------------------------
+  // UI events
+  // -----------------------------
+  q.addEventListener("input", () => renderMatchList());
 
   pickBtn.addEventListener("click", () => {
-    const items = getMatches(q.value, 1);
-    if (items.length) {
-      const { key, rec } = items[0];
-      setSelected(key);
-      q.value = getDisplayName(key, rec);
-      hideSuggest();
-    }
+    const matches = getMatches(q.value);
+    if (!matches.length) return;
+    setSelected(matches[0].key);
+    q.value = displayName(matches[0].key);
+    renderMatchList();
   });
 
   clearBtn.addEventListener("click", () => {
     q.value = "";
     setSelected(null);
-    hideSuggest();
     renderMatchList();
   });
 
-  btnEn.addEventListener("click", () => { lang = "en"; applyLangToUI(); });
-  btnZh.addEventListener("click", () => { lang = "zh"; applyLangToUI(); });
+  btnEn.addEventListener("click", () => {
+    lang = "en";
+    renderAllList();
+    renderMatchList();
+    setSelected(selectedKey);
+    runAudit();
+  });
 
+  btnZh.addEventListener("click", () => {
+    lang = "zh";
+    renderAllList();
+    renderMatchList();
+    setSelected(selectedKey);
+    runAudit();
+  });
+
+  // -----------------------------
+  // Inject minimal CSS for highlight (淡绿色)
+  // (If you already set in style.css, this won't hurt)
+  // -----------------------------
+  const style = document.createElement("style");
+  style.textContent = `
+    /* selected region: light green */
+    svg.feet path.selected {
+      fill: rgba(120, 200, 120, 0.35) !important;
+      stroke: rgba(80, 160, 80, 0.9) !important;
+      stroke-width: 1.5 !important;
+    }
+    /* make sure non-selected remains visible even if SVG has black fills */
+    svg.feet path {
+      transition: fill 120ms ease, stroke 120ms ease;
+    }
+    /* list items */
+    .item { display:flex; justify-content:space-between; gap:10px; padding:6px 8px; border-radius:8px; cursor:pointer; }
+    .item:hover { background: rgba(0,0,0,0.05); }
+    .item.active { outline: 2px solid rgba(120,200,120,0.55); }
+    .name { flex:1; }
+    .meta { opacity:0.75; font-size:12px; white-space:nowrap; }
+    .hint { opacity:0.7; padding:8px; font-size:12px; }
+  `;
+  document.head.appendChild(style);
+
+  // Go
   loadSVG();
 })();
+
 
 
