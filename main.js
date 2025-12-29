@@ -164,31 +164,47 @@
   }
 
   function computeSide(paths) {
-  if (!svgEl || !paths?.length) return t().sideNA;
-
-  const vb = svgEl.viewBox?.baseVal;
-  if (!vb) return t().sideBoth;
-  const mid = vb.x + vb.width / 2;
-
-  let left = 0, right = 0;
-
-  for (const p of paths) {
-    const d = p.getAttribute("d") || "";
-    // 取第一个 M 的 x 坐标（足够稳定，用于左右判断）
-    const m = d.match(/[Mm]\s*([-\d.]+)/);
-    if (!m) continue;
-    const x = parseFloat(m[1]);
-    if (!Number.isFinite(x)) continue;
-
-    if (x < mid) left++;
-    else right++;
-  }
-
-  if (left && right) return t().sideBoth;
-  if (left) return t().sideLeft;
-  if (right) return t().sideRight;
-  return t().sideNA;
+    if (!svgEl || !paths?.length) return t().sideNA;
+  
+    const vb = svgEl.viewBox?.baseVal;
+    if (!vb) return t().sideBoth;
+    const mid = vb.x + vb.width / 2;
+  
+    const getTranslateX = (p) => {
+      const tr = p.getAttribute("transform") || "";
+      // 支持 transform="translate(-5.55 -0.06)" 或 "translate(-5.55,-0.06)"
+      const m = tr.match(/translate\(\s*([-\d.]+)(?:[\s,]+([-\d.]+))?\s*\)/i);
+      if (!m) return 0;
+      const tx = parseFloat(m[1]);
+      return Number.isFinite(tx) ? tx : 0;
+    };
+  
+    const getStartXFromD = (p) => {
+      const d = p.getAttribute("d") || "";
+      // 抓第一个 M/m 的 x
+      const m = d.match(/[Mm]\s*([-\d.]+)/);
+      if (!m) return null;
+      const x = parseFloat(m[1]);
+      return Number.isFinite(x) ? x : null;
+    };
+  
+    let left = 0, right = 0;
+  
+    for (const p of paths) {
+      const x0 = getStartXFromD(p);
+      if (x0 == null) continue;
+      const x = x0 + getTranslateX(p);
+  
+      if (x < mid) left++;
+      else right++;
+    }
+  
+    if (left && right) return t().sideBoth;
+    if (left) return t().sideLeft;
+    if (right) return t().sideRight;
+    return t().sideNA;
 }
+
 
 
   function clearAllHighlights() {
